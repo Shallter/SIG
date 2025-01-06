@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple Map Interactive</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.css" />
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background-color: #f4f4f9;
+        }
+        h1 {
+            margin-top: 20px;
+            color: #333;
+        }
+        #map {
+            height: 500px;
+            width: 90%;
+            margin: 20px auto;
+            border: 2px solid #ccc;
+            border-radius: 8px;
+        }
+        #info {
+            margin: 10px;
+            font-size: 14px;
+            color: #555;
+        }
+        #controls {
+            margin: 10px;
+        }
+        button {
+            padding: 10px 15px;
+            margin: 5px;
+            font-size: 14px;
+            border: none;
+            border-radius: 5px;
+            background-color: #007bff;
+            color: white;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+    </style>
+</head>
+<body>
+    <h1>Simple Map Interactive</h1>
+    <div id="info">Koordinat: <span id="coords">-</span></div>
+    <div id="controls">
+        <button id="clearMarkers">Hapus Semua Marker</button>
+        <button id="measureDistance">Pengukuran Jarak</button>
+    </div>
+    <div id="map"></div>
+    <script>
+        var map = L.map('map').setView([-6.981624276732107, 110.41190317104426], 13);
+
+        
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            attribution: '© OpenStreetMap contributors'
+        }).addTo(map);
+
+        
+        L.control.scale().addTo(map);
+
+        
+        L.Control.geocoder().addTo(map);
+
+        
+        var markers = [];
+
+        
+        var locations = [
+            { lat: -6.990, lng: 110.420, type: 'Rumah Sakit', name: 'RSUD Semarang' },
+            { lat: -6.982, lng: 110.430, type: 'Pendidikan', name: 'Universitas Diponegoro' },
+            { lat: -6.975, lng: 110.415, type: 'Tempat Ibadah', name: 'Masjid Agung Jawa Tengah' }
+        ];
+
+        
+        locations.forEach(function(location) {
+            var marker = L.marker([location.lat, location.lng]).addTo(map);
+            marker.bindPopup(`<b>${location.name}</b><br>Jenis: ${location.type}`).openPopup();
+            markers.push(marker);
+        });
+
+        
+        function renameMarker(marker, newName) {
+            marker.bindPopup(`<b>${newName}</b>`).openPopup();
+        }
+
+        
+        map.on('click', function(e) {
+            var latlng = e.latlng;
+
+            
+            var customIcon = L.icon({
+                iconUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon.png',
+                iconSize: [25, 41],
+                iconAnchor: [12, 41],
+                popupAnchor: [1, -34]
+            });
+
+            var newMarker = L.marker([latlng.lat, latlng.lng], { icon: customIcon }).addTo(map);
+
+            newMarker.bindPopup(
+                `<b>Marker Baru</b><br>
+                <button onclick="renamePrompt(${markers.length})">Ganti Nama</button>
+                <br><button onclick="removeMarker(${markers.length})">Hapus Marker</button>`
+            ).openPopup();
+
+            markers.push(newMarker); 
+        });
+
+        
+        function renamePrompt(index) {
+            var newName = prompt("Masukkan nama baru untuk marker:");
+            if (newName && markers[index]) {
+                renameMarker(markers[index], newName);
+            }
+        }
+
+        
+        function removeMarker(index) {
+            if (markers[index]) {
+                map.removeLayer(markers[index]); 
+                markers.splice(index, 1); 
+            }
+        }
+
+        
+        function removeAllMarkers() {
+            markers.forEach(function(marker) {
+                map.removeLayer(marker); 
+            });
+            markers = []; 
+        }
+
+        
+        map.on('mousemove', function(e) {
+            document.getElementById('coords').innerText = `Lat: ${e.latlng.lat.toFixed(5)}, Lng: ${e.latlng.lng.toFixed(5)}`;
+        });
+
+        
+        document.getElementById('clearMarkers').onclick = removeAllMarkers;
+
+        
+        var distancePoints = [];
+        var line;
+
+        document.getElementById('measureDistance').onclick = function () {
+            alert("Klik dua titik pada peta untuk mengukur jarak.");
+
+            map.on('click', function measureClick(e) {
+                distancePoints.push(e.latlng);
+
+                if (distancePoints.length === 2) {
+                    line = L.polyline(distancePoints, { color: 'red' }).addTo(map);
+                    var distance = map.distance(distancePoints[0], distancePoints[1]);
+                    alert(`Jarak antara titik: ${(distance / 1000).toFixed(2)} km`);
+                    distancePoints = []; 
+
+                    
+                    setTimeout(function () {
+                        map.removeLayer(line);
+                    }, 5000); 
+
+                    map.off('click', measureClick); 
+                }
+            });
+        };
+
+    </script>
+</body>
+</html>
